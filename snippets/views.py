@@ -1,47 +1,36 @@
-from django.http import HttpResponse, JsonResponse
-from rest_framework.parsers import JSONParser
-from django.views.decorators.csrf import csrf_exempt
+from rest_framework import mixins, generics
 
 from snippets.models import Snippet
 from snippets.serializers import SnippetSerializer
 
 
-@csrf_exempt
-def snippet_list(request):
-    if request.method == "GET":
-        snippets = Snippet.objects.all()
-        serializer = SnippetSerializer(snippets, many=True)
-        return JsonResponse(serializer.data, safe=False)
+class SnippetList(
+    mixins.CreateModelMixin, mixins.ListModelMixin, generics.GenericAPIView
+):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
 
-    if request.method == "POST":
-        data = JSONParser().parse(request)
-        serializer = SnippetSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=201)
-        return JsonResponse(serializer.errors, status=400)
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
 
 
-@csrf_exempt
-def snippet_details(request, pk):
-    try:
-        snippet = Snippet.objects.get(pk=pk)
-    except Snippet.DoesNotExist:
-        return HttpResponse(status=404)
+class SnippetDetails(
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    generics.GenericAPIView,
+):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
 
-    if request.method == "GET":
-        serializer = SnippetSerializer(snippet)
-        return JsonResponse(serializer.data)
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
 
-    if request.method == "PUT":
-        data = JSONParser().parse(request)
-        serializer = SnippetSerializer(snippet, data=data)
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data)
-        return JsonResponse(serializer.errors, status=400)
-
-    if request.method == "DELETE":
-        snippet.delete()
-        return HttpResponse(status=204)
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
